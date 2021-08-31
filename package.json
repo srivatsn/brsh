@@ -10,7 +10,7 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:browser-shell.helloWorld"
+        "*"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -19,7 +19,16 @@
 				"command": "browser-shell.helloWorld",
 				"title": "Hello World"
 			}
-		]
+		],
+		"terminal": {
+			"profiles": [
+				{
+					"id": "browser-shell.brsh",
+					"title": "brsh",
+					"icon": "$(browser)"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "yarn run compile",
