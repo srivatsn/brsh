@@ -137,6 +137,11 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.17.12.tgz#7a31f720b85a617e54e42d24c4ace136601656c7"
   integrity sha512-vhUqgjJR1qxwTWV5Ps5txuy2XMdf7Fw+OrdChRboy8BmWUPkckOhphaohzFG6b8DW7CrxaBMdrdJ47SYFq1okw==
 
+"@types/shell-quote@^1.7.1":
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/@types/shell-quote/-/shell-quote-1.7.1.tgz#2d059091214a02c29f003f591032172b2aff77e8"
+  integrity sha512-SWZ2Nom1pkyXCDohRSrkSKvDh8QOG9RfAsrt5/NsPQC4UQJ55eG0qClA40I+Gkez4KTQ0uDUT8ELRXThf3J5jw==
+
 "@types/vscode@^1.59.0":
   version "1.59.0"
   resolved "https://registry.yarnpkg.com/@types/vscode/-/vscode-1.59.0.tgz#11c93f5016926126bf30b47b9ece3bd617eeef31"
@@ -1815,6 +1820,11 @@ shebang-regex@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
+
+shell-quote@^1.7.2:
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/shell-quote/-/shell-quote-1.7.2.tgz#67a7d02c76c9da24f99d20808fcaded0e0e04be2"
+  integrity sha512-mRz/m/JVscCrkMyPqHc/bczi3OQHkLTqXHEFu0zDhK/qfv3UcOA4SVmRCLmos4bhjr9ekVQubj/R7waKapmiQg==
 
 signal-exit@^3.0.3:
   version "3.0.3"

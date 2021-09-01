@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
+import { FileSystem } from './commands/fs';
+import * as quote from 'shell-quote';
 
 // Settings
-const PROMPT = "codespace → ";
+const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
 const KEYS = {
     enter: "\r",
     backspace: "\x7f",
@@ -12,12 +14,10 @@ const ACTIONS = {
     clear: "\x1b[2J\x1b[3J\x1b[;H",
 };
 
-// cleanup inconsitent line breaks
-const formatText = (text: string) => `\r${text.split(/(\r?\n)/g).join("\r\n")}\r\n`;
-
 export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
-    private currentLine = PROMPT;
+    private readonly fs = new FileSystem();
+    private currentLine = this.constructPrompt();
 
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
 
@@ -27,32 +27,37 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
     open(initialDimensions: vscode.TerminalDimensions | undefined): void {
         this.writeEmitter.fire(this.currentLine);
-
     }
     close(): void {
     }
 
-    handleInput(data: string): void {
+    formatText = (text: string) => { return text + "\r\n"; };
+
+    async handleInput(data: string): Promise<void> {
         switch (data) {
             case KEYS.enter:
                 this.writeEmitter.fire(`\r\n`);
 
-                const command = this.currentLine.slice(PROMPT.length);
+                const command = this.currentLine.slice(this.constructPrompt().length);
                 // execute command
-                const { stdout, stderr } = this.executeCommand(command);
+                try {
+                    const { stdout, stderr } = await this.executeCommand(command);
 
-                if (stdout) {
-                    this.writeEmitter.fire(formatText(stdout));
+                    if (stdout) {
+                        this.writeEmitter.fire(this.formatText(stdout));
+                    }
+
+                    if (stderr && stderr.length) {
+                        this.writeEmitter.fire(this.formatText(stderr));
+                    }
+                } catch (error: any) {
+                    this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
                 }
 
-                if (stderr && stderr.length) {
-                    this.writeEmitter.fire(formatText(stderr));
-                }
-
-                this.currentLine = PROMPT;
+                this.currentLine = this.constructPrompt();
                 this.writeEmitter.fire(`\r${this.currentLine}`);
             case KEYS.backspace:
-                if (this.currentLine.length <= PROMPT.length) {
+                if (this.currentLine.length <= this.constructPrompt().length) {
                     return;
                 }
 
@@ -67,11 +72,40 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
         }
     }
 
-    executeCommand(command: string): { stdout: string | undefined; stderr: string | undefined; } {
+    async executeCommand(input: string): Promise<{ stdout: string | undefined; stderr: string | undefined; }> {
+        if (!input) {
+            return { stdout: undefined, stderr: undefined };
+        }
+
+        const parsedArgs = quote.parse(input);
+        let args = parsedArgs.filter(arg => typeof arg === "string") as string[];
+
+        const command = args.shift() as string;
         if (!command) {
             return { stdout: undefined, stderr: undefined };
         }
 
-        return { stdout: "done", stderr: undefined };
+        switch (command) {
+            case "ls":
+                return { stdout: await this.fs.ls([]), stderr: undefined };
+
+            case "cd":
+                return { stdout: await this.fs.cd(args), stderr: undefined };
+
+            case "pwd":
+                return { stdout: this.fs.pwd(), stderr: undefined };
+
+            case "code":
+                return { stdout: await this.fs.code(args), stderr: undefined };
+
+            case "clear":
+                return { stdout: ACTIONS.clear, stderr: undefined };
+        }
+
+        return { stdout: undefined, stderr: `Unknown command: ${command}` };
+    }
+
+    private constructPrompt(): string {
+        return PROMPT.replace("$pwd", this.fs.pwd());
     }
 }

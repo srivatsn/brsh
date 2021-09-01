@@ -27,7 +27,7 @@
 				"--extensionDevelopmentKind=web"
 			],
 			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
+				"${workspaceFolder}/out/web/**/*.js"
 			],
 			"preLaunchTask": "npm: watch-web"
 		},
