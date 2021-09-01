@@ -68,6 +68,10 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     }
 
     executeCommand(command: string): { stdout: string | undefined; stderr: string | undefined; } {
+        if (!command) {
+            return { stdout: undefined, stderr: undefined };
+        }
+
         return { stdout: "done", stderr: undefined };
     }
 }
