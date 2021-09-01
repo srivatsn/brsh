@@ -16,13 +16,14 @@ const ACTIONS = {
 
 export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
+    private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
     private currentLine = this.constructPrompt();
 
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
+    onDidClose?: vscode.Event<number | void> | undefined = this.closeEmitter.event;
 
     onDidOverrideDimensions?: vscode.Event<vscode.TerminalDimensions | undefined> | undefined;
-    onDidClose?: vscode.Event<number | void> | undefined;
     onDidChangeName?: vscode.Event<string> | undefined;
 
     open(initialDimensions: vscode.TerminalDimensions | undefined): void {
@@ -100,6 +101,9 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
             case "clear":
                 return { stdout: ACTIONS.clear, stderr: undefined };
+
+            case "exit":
+                this.closeEmitter.fire();
         }
 
         return { stdout: undefined, stderr: `Unknown command: ${command}` };
