@@ -48,7 +48,13 @@
 		"package-web": "webpack --mode production --devtool hidden-source-map --config ./src/webpack.config.js"
 	},
 	"dependencies": {
-		"shell-quote": "^1.7.2"
+		"shell-quote": "^1.7.2",
+		"enquirer": "^2.3.6",
+		"stream-browserify": "^3.0.0",
+		"readline-browserify": "^0.0.4",
+		"buffer": "^6.0.3",
+		"util": "^0.12.4",
+		"process": "^0.11.10"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.59.0",

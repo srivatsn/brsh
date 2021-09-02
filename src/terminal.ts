@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { FileSystem } from './commands/fs';
 import * as quote from 'shell-quote';
+import * as readline from 'readline';
+import * as stream from 'stream';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -18,8 +20,34 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
     private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
-    private currentLine = this.constructPrompt();
 
+    private readonly readStream: stream.Readable;
+    private readonly readStreamWriter: stream.Writable;
+    private readonly writeStream: stream.Writable;
+    private readonly readLine: readline.Interface;
+
+    constructor() {
+        // Set up read and write streams that we hand out enquirer. Connect them to a reader and writer using which we can pipe messages in.
+        this.readStream = new stream.Readable({ read: () => { } });
+        this.readStreamWriter = new stream.Writable({
+            write: (chunk, encoding, callback) => {
+                this.readStream.push(chunk, encoding);
+                callback();
+            }
+        });
+        this.writeStream = new stream.Writable({
+            write: (chunk, encoding, callback) => {
+                this.writeEmitter.fire(chunk.toString());
+                callback();
+            }
+        });
+
+        this.readLine = readline.createInterface({
+            input: this.readStream,
+            output: this.writeStream,
+            terminal: true,
+        });
+    }
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
     onDidClose?: vscode.Event<number | void> | undefined = this.closeEmitter.event;
 
@@ -27,50 +55,84 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     onDidChangeName?: vscode.Event<string> | undefined;
 
     open(initialDimensions: vscode.TerminalDimensions | undefined): void {
-        this.writeEmitter.fire(this.currentLine);
+        //this.writeEmitter.fire(this.currentLine);
+        this.readLine.setPrompt(this.constructPrompt());
+        this.readLine.prompt();
+
+        this.readLine.on('line', async (command: string) => {
+
+            // execute command
+            try {
+                const { stdout, stderr } = await this.executeCommand(command);
+
+                if (stdout) {
+                    this.writeEmitter.fire(this.formatText(stdout));
+                }
+
+                if (stderr && stderr.length) {
+                    this.writeEmitter.fire(this.formatText(stderr));
+                }
+            } catch (error: any) {
+                this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
+            }
+
+            this.readLine.setPrompt(this.constructPrompt());
+            this.readLine.prompt();
+        });
+
+        this.readLine.on('close', () => {
+            this.closeEmitter.fire();
+        });
+
+        this.readLine.on('SIGINT', () => {
+        });
     }
     close(): void {
     }
 
+
     formatText = (text: string) => { return text + "\r\n"; };
 
     async handleInput(data: string): Promise<void> {
-        switch (data) {
-            case KEYS.enter:
-                this.writeEmitter.fire(`\r\n`);
 
-                const command = this.currentLine.slice(this.constructPrompt().length);
-                // execute command
-                try {
-                    const { stdout, stderr } = await this.executeCommand(command);
+        this.readStreamWriter.write(data);
 
-                    if (stdout) {
-                        this.writeEmitter.fire(this.formatText(stdout));
-                    }
+        // switch (data) {
+        //     case KEYS.enter:
+        //         this.writeEmitter.fire(`\r\n`);
 
-                    if (stderr && stderr.length) {
-                        this.writeEmitter.fire(this.formatText(stderr));
-                    }
-                } catch (error: any) {
-                    this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
-                }
+        //         const command = this.currentLine.slice(this.constructPrompt().length);
+        //         // execute command
+        //         try {
+        //             const { stdout, stderr } = await this.executeCommand(command);
 
-                this.currentLine = this.constructPrompt();
-                this.writeEmitter.fire(`\r${this.currentLine}`);
-            case KEYS.backspace:
-                if (this.currentLine.length <= this.constructPrompt().length) {
-                    return;
-                }
+        //             if (stdout) {
+        //                 this.writeEmitter.fire(this.formatText(stdout));
+        //             }
 
-                // remove last character
-                this.currentLine = this.currentLine.substr(0, this.currentLine.length - 1);
-                this.writeEmitter.fire(ACTIONS.cursorBack);
-                this.writeEmitter.fire(ACTIONS.deleteChar);
-                return;
-            default:
-                this.currentLine += data;
-                this.writeEmitter.fire(data);
-        }
+        //             if (stderr && stderr.length) {
+        //                 this.writeEmitter.fire(this.formatText(stderr));
+        //             }
+        //         } catch (error: any) {
+        //             this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
+        //         }
+
+        //         this.currentLine = this.constructPrompt();
+        //         this.writeEmitter.fire(`\r${this.currentLine}`);
+        //     case KEYS.backspace:
+        //         if (this.currentLine.length <= this.constructPrompt().length) {
+        //             return;
+        //         }
+
+        //         // remove last character
+        //         this.currentLine = this.currentLine.substr(0, this.currentLine.length - 1);
+        //         this.writeEmitter.fire(ACTIONS.cursorBack);
+        //         this.writeEmitter.fire(ACTIONS.deleteChar);
+        //         return;
+        //     default:
+        //         this.currentLine += data;
+        //         this.writeEmitter.fire(data);
+        // }
     }
 
     async executeCommand(input: string): Promise<{ stdout: string | undefined; stderr: string | undefined; }> {
