@@ -33,6 +33,7 @@ module.exports = /** @type WebpackConfig */ {
     plugins: [
         new webpack.ProvidePlugin({
             process: 'process/browser', // provide a shim for the global `process` variable
+            Buffer: ['buffer', 'Buffer'],
         }),
     ],
     externals: {

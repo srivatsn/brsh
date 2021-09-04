@@ -1,12 +1,24 @@
 import * as vscode from 'vscode';
 import { FileSystem } from './commands/fs';
 import * as quote from 'shell-quote';
+import { WasiCommands } from './commands/wasi';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
 const KEYS = {
     enter: "\r",
     backspace: "\x7f",
+    up: "\x1b[A",
+    down: "\x1b[B",
+    left: "\x1b[D",
+    right: "\x1b[C",
+    tab: "\t",
+    home: "\x1b[1~",
+    end: "\x1b[4~",
+    pageUp: "\x1b[5~",
+    pageDown: "\x1b[6~",
+    delete: "\x1b[3~",
+    insert: "\x1b[2~",
 };
 const ACTIONS = {
     cursorBack: "\x1b[D",
@@ -18,7 +30,13 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
     private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
+    private readonly wasiCmds;
+
     private currentLine = this.constructPrompt();
+
+    constructor(private readonly context: vscode.ExtensionContext) {
+        this.wasiCmds = new WasiCommands(context);
+    }
 
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
     onDidClose?: vscode.Event<number | void> | undefined = this.closeEmitter.event;
@@ -32,9 +50,10 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     close(): void {
     }
 
-    formatText = (text: string) => { return text + "\r\n"; };
+    formatText = (text: string) => { return text[text.length - 1] === '\n' ? text : text + "\r\n"; };
 
     async handleInput(data: string): Promise<void> {
+        const promptLength = this.constructPrompt().length;
         switch (data) {
             case KEYS.enter:
                 this.writeEmitter.fire(`\r\n`);
@@ -58,7 +77,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.currentLine = this.constructPrompt();
                 this.writeEmitter.fire(`\r${this.currentLine}`);
             case KEYS.backspace:
-                if (this.currentLine.length <= this.constructPrompt().length) {
+                if (this.currentLine.length <= promptLength) {
                     return;
                 }
 
@@ -67,6 +86,16 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.writeEmitter.fire(ACTIONS.cursorBack);
                 this.writeEmitter.fire(ACTIONS.deleteChar);
                 return;
+            case KEYS.up:
+            case KEYS.down:
+            case KEYS.pageUp:
+            case KEYS.pageDown:
+                // TODO: Provide history.
+                return;
+            case KEYS.tab:
+                // TODO: Autocomplete.
+                return;
+
             default:
                 this.currentLine += data;
                 this.writeEmitter.fire(data);
@@ -101,6 +130,10 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
             case "clear":
                 return { stdout: ACTIONS.clear, stderr: undefined };
+
+            case "echo":
+                const { stdout, stderr } = await this.wasiCmds.echo(args);
+                return { stdout: stdout, stderr: stderr };
 
             case "exit":
                 this.closeEmitter.fire();

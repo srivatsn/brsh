@@ -8,7 +8,7 @@ import { TerminalProfileProvider } from './terminalProfileProvider';
 export function activate(context: vscode.ExtensionContext) {
 
 	// Register a terminal profile provider
-	const terminalProfileProvider = new TerminalProfileProvider();
+	const terminalProfileProvider = new TerminalProfileProvider(context);
 	const disposable = vscode.window.registerTerminalProfileProvider('browser-shell.brsh', terminalProfileProvider);
 
 	context.subscriptions.push(disposable);

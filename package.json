@@ -48,7 +48,12 @@
 		"package-web": "webpack --mode production --devtool hidden-source-map --config ./src/webpack.config.js"
 	},
 	"dependencies": {
-		"shell-quote": "^1.7.2"
+		"shell-quote": "^1.7.2",
+		"process": "^0.11.10",
+		"buffer": "^6.0.3",
+		"@wasmer/wasi": "^0.12.0",
+		"@wasmer/wasmfs": "^0.12.0",
+		"@wasmer/wasm-transformer": "^0.12.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.59.0",
