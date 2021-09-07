@@ -60,7 +60,7 @@ export class FileSystem {
         return "";
     }
 
-    private getFullUri(relativePath: string): vscode.Uri | undefined {
+    public getFullUri(relativePath: string): vscode.Uri | undefined {
         if (!this.rootUri) {
             return undefined;
         }

@@ -131,9 +131,15 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             case "clear":
                 return { stdout: ACTIONS.clear, stderr: undefined };
 
-            case "echo":
+            case "echo": {
                 const { stdout, stderr } = await this.wasiCmds.echo(args);
                 return { stdout: stdout, stderr: stderr };
+            }
+
+            case "cat": {
+                const { stdout, stderr } = await this.wasiCmds.cat(args, this.fs);
+                return { stdout: stdout, stderr: stderr };
+            }
 
             case "exit":
                 this.closeEmitter.fire();
