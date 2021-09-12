@@ -506,6 +506,11 @@ astral-regex@^2.0.0:
   resolved "https://registry.yarnpkg.com/astral-regex/-/astral-regex-2.0.0.tgz#483143c567aeed4785759c0865786dc77d7d2e31"
   integrity sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==
 
+asyncify-wasm@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/asyncify-wasm/-/asyncify-wasm-1.2.1.tgz#a15c0480e858619a4f971e44e6fc05c49015d9e8"
+  integrity sha512-ZS7tZ8H8EVbUxAZnkKHvMt9UkYoALue2jwrVl7cnLByjq+1MRrbq7rL5TS+EHQduwkfXD/cNZNa+I0ZyLEBBRQ==
+
 balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"

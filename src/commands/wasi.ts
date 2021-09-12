@@ -1,8 +1,10 @@
-import { WASI } from '@wasmer/wasi';
+import { WASI } from '../wasi/wasi';
 import browserBindings from "@wasmer/wasi/lib/bindings/browser";
 import { WasmFs } from '@wasmer/wasmfs';
 import * as vscode from 'vscode';
 import { FileSystem } from './fs';
+import * as Asyncify from 'asyncify-wasm';
+
 
 export class WasiCommands {
     constructor(private readonly context: vscode.ExtensionContext) {
@@ -64,12 +66,12 @@ export class WasiCommands {
         const responseArrayBuffer = await wasmResponse.arrayBuffer();
         const wasmBytes = new Uint8Array(responseArrayBuffer);
         const wasmModule = await WebAssembly.compile(wasmBytes);
-        const instance = await WebAssembly.instantiate(wasmModule, {
+        const instance = await Asyncify.instantiate(wasmModule, {
             ...wasi.getImports(wasmModule)
         });
 
         // Start the WebAssembly WASI instance!
-        wasi.start(instance);
+        await wasi.start(instance);
 
         // Output what's inside of /dev/stdout!
         const stdout = await wasmFs.getStdOut() as string;
