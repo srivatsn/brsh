@@ -20,10 +20,6 @@ export class WasiCommands {
 
     private async runWasm(commandName: string, commandFile: string, args: string[], fs?: FileSystem): Promise<{ stdout: string, stderr: string }> {
         const wasmFs = new WasmFs();
-
-        wasmFs.fs.writeFileSync('/README.md', 'fake content');
-        wasmFs.fs.writeFileSync('/SECURITY.md', 'fake content');
-
         const wasi = new WASI({
             args: [commandName, ...args],
             env: {},

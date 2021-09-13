@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { FileSystem } from './commands/fs';
 import * as quote from 'shell-quote';
-import { WasiCommands } from './commands/wasi';
+import { WasiCommands } from './commands/wasiCommands';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
