@@ -23,30 +23,6 @@ export class WasiCommands {
 
         wasmFs.fs.writeFileSync('/README.md', 'fake content');
         wasmFs.fs.writeFileSync('/SECURITY.md', 'fake content');
-        if (fs) {
-            const oldOpenSync = wasmFs.fs.openSync;
-            wasmFs.fs.openSync = (path: string, flags: string, mode?: string): number => {
-                console.log("Opening");
-                console.log(path);
-                console.log(flags);
-                console.log(mode);
-                const uri = fs.getFullUri(path);
-                console.log(uri);
-
-                async function writeTo(uri?: vscode.Uri) {
-                    if (uri) {
-                        const data = await vscode.workspace.fs.readFile(uri);
-                        wasmFs.fs.writeFileSync(path, data);
-                    }
-                }
-
-                writeTo(uri);
-                console.log("calling oldopensync");
-                const retVal = oldOpenSync(path, flags, mode);
-                console.log("called oldopensync");
-                return retVal;
-            };
-        }
 
         const wasi = new WASI({
             args: [commandName, ...args],
@@ -54,12 +30,12 @@ export class WasiCommands {
             preopens: {
                 ".": ".",
                 "/": "/",
-                "README.md": "/README.md"
             },
             bindings: {
                 ...browserBindings,
                 fs: wasmFs.fs,
             },
+            vscodeFileSystem: fs
         });
 
         const wasmResponse = await fetch(vscode.Uri.joinPath(this.context.extensionUri, commandFile).toString());

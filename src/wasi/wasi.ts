@@ -825,7 +825,7 @@ export default class WASIDefault {
                 }
             ),
             fd_read: wrap(
-                async (fd: number, iovs: number, iovsLen: number, nread: number) => {
+                (fd: number, iovs: number, iovsLen: number, nread: number) => {
                     const stats = CHECK_FD(fd, WASI_RIGHT_FD_READ);
                     const IS_STDIN = stats.real === 0;
                     let read = 0;
@@ -1127,7 +1127,7 @@ export default class WASIDefault {
                 }
             ),
             path_open: wrap(
-                (
+                async (
                     dirfd: number,
                     dirflags: number,
                     pathPtr: number,
@@ -1250,6 +1250,13 @@ export default class WASIDefault {
                     if (!write && isDirectory) {
                         realfd = fs.openSync(full, fs.constants.O_RDONLY);
                     } else {
+                        // If it's a real file put it into memfs from vscode
+
+                        const uri = this.vscodeFileSystem?.getFullUri(full);
+                        if (uri) {
+                            fs.writeFileSync(full, await vscode.workspace.fs.readFile(uri));
+                        }
+
                         realfd = fs.openSync(full, noflags);
                     }
                     const newfd = [...this.FD_MAP.keys()].reverse()[0] + 1;

@@ -50,7 +50,10 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     close(): void {
     }
 
-    formatText = (text: string) => { return text[text.length - 1] === '\n' ? text : text + "\r\n"; };
+    formatText = (text: string) => {
+        text = text.replace(/\r?\n/g, "\r\n");
+        return text[text.length - 1] === '\n' ? text : text + "\r\n";
+    };
 
     async handleInput(data: string): Promise<void> {
         const promptLength = this.constructPrompt().length;
