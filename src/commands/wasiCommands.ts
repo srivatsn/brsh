@@ -8,6 +8,8 @@ import * as axios from 'axios';
 
 
 export class WasiCommands {
+    private readonly compiledCommands = new Map<string, WebAssembly.Module>();
+
     constructor(private readonly context: vscode.ExtensionContext) {
     }
 
@@ -35,25 +37,18 @@ export class WasiCommands {
             vscodeFileSystem: fs
         });
 
-        let wasmBytes: Uint8Array;
-        const commandFileUri = vscode.Uri.joinPath(this.context.extensionUri, commandFile);
-        if (commandFileUri.scheme === 'file') {
-            wasmBytes = await vscode.workspace.fs.readFile(commandFileUri);
-        }
-        else {
-            try {
-                const wasmResponse = await axios.default(
-                    {
-                        url: commandFileUri.toString(),
-                        responseType: 'arraybuffer',
-                    });
+        let wasmModule = this.compiledCommands.get(commandName);
 
-                wasmBytes = new Uint8Array(wasmResponse.data);
-            } catch {
-                return ({ stdout: '', stderr: 'Unable to find command' });
+        if (wasmModule === undefined) {
+            try {
+                wasmModule = await this.compileCommand(commandFile, wasi);
+                this.compiledCommands.set(commandName, wasmModule);
+            }
+            catch (e: any) {
+                return ({ stdout: "", stderr: e.toString() });
             }
         }
-        const wasmModule = await WebAssembly.compile(wasmBytes);
+
         const instance = await Asyncify.instantiate(wasmModule, {
             ...wasi.getImports(wasmModule)
         });
@@ -65,5 +60,25 @@ export class WasiCommands {
         const stdout = await wasmFs.getStdOut() as string;
         const stderr = wasmFs.fs.readFileSync('/dev/stderr').toString();
         return ({ stdout, stderr });
+    }
+
+    private async compileCommand(commandFile: string, wasi: WASI): Promise<WebAssembly.Module> {
+        let wasmBytes: Uint8Array;
+        const commandFileUri = vscode.Uri.joinPath(this.context.extensionUri, commandFile);
+        if (commandFileUri.scheme === 'file') {
+            wasmBytes = await vscode.workspace.fs.readFile(commandFileUri);
+        }
+        else {
+            const wasmResponse = await axios.default(
+                {
+                    url: commandFileUri.toString(),
+                    responseType: 'arraybuffer',
+                });
+
+            wasmBytes = new Uint8Array(wasmResponse.data);
+        }
+        const wasmModule = await WebAssembly.compile(wasmBytes);
+
+        return wasmModule;
     }
 }
