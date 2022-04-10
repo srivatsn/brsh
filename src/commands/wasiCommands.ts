@@ -10,18 +10,56 @@ import * as axios from 'axios';
 export class WasiCommands {
     private readonly compiledCommands = new Map<string, WebAssembly.Module>();
 
-    constructor(private readonly context: vscode.ExtensionContext) {
+    constructor(private readonly context: vscode.ExtensionContext, private readonly vscodeFileSystem: FileSystem) {
+        this.install(['echo', vscode.Uri.joinPath(this.context.extensionUri, 'echo.wasm').toString()]);
+        this.install(['cat', vscode.Uri.joinPath(this.context.extensionUri, 'cat.wasm').toString()]);
     }
 
-    public async echo(args: string[]): Promise<{ stdout: string, stderr: string }> {
-        return this.runWasm('echo', 'echo.wasm', args);
+    public async install(args: string[]): Promise<{ stdout: string, stderr: string }> {
+        if (args.length !== 2) {
+            return { stdout: "", stderr: "Usage: install <command name> <url of wasm file to be installed>" };
+        }
+
+        const commandName = args[0];
+
+        let commandFileUri: vscode.Uri;
+        try {
+            commandFileUri = vscode.Uri.parse(args[1], true);
+        } catch {
+            return { stdout: "", stderr: "Invalid argument. Please provide a valid URL" };
+        }
+
+        try {
+            const module = await this.compileCommand(commandFileUri);
+            this.compiledCommands.set(commandName, module);
+        } catch (e: any) {
+            return ({ stdout: "", stderr: `Failed to install ${commandName}: ${e.toString()}` });
+        }
+
+        return ({ stdout: `Successfully installed ${commandName}`, stderr: "" });
     }
 
-    public async cat(args: string[], fs: FileSystem): Promise<{ stdout: string, stderr: string }> {
-        return this.runWasm('cat', 'cat.wasm', args, fs);
+    public async uninstall(args: string[]): Promise<{ stdout: string, stderr: string }> {
+        if (args.length !== 1) {
+            return { stdout: "", stderr: "Usage: uninstall <command to be uninstalled>" };
+        }
+
+        const commandName = args[0];
+        if (!this.compiledCommands.has(commandName)) {
+            return { stdout: "", stderr: `Usage: Unkown command ${commandName}` };
+        }
+
+        this.compiledCommands.delete(commandName);
+        return ({ stdout: `Successfully uninstalled ${commandName}`, stderr: "" });
     }
 
-    private async runWasm(commandName: string, commandFile: string, args: string[], fs?: FileSystem): Promise<{ stdout: string, stderr: string }> {
+    public async run(commandName: string, args: string[]): Promise<{ stdout: string, stderr: string }> {
+        let wasmModule = this.compiledCommands.get(commandName);
+
+        if (wasmModule === undefined) {
+            return ({ stdout: "", stderr: `Unknown command: ${commandName}` });
+        }
+
         const wasmFs = new WasmFs();
         const wasi = new WASI({
             args: [commandName, ...args],
@@ -34,20 +72,8 @@ export class WasiCommands {
                 ...bindings,
                 fs: wasmFs.fs,
             },
-            vscodeFileSystem: fs
+            vscodeFileSystem: this.vscodeFileSystem
         });
-
-        let wasmModule = this.compiledCommands.get(commandName);
-
-        if (wasmModule === undefined) {
-            try {
-                wasmModule = await this.compileCommand(commandFile, wasi);
-                this.compiledCommands.set(commandName, wasmModule);
-            }
-            catch (e: any) {
-                return ({ stdout: "", stderr: e.toString() });
-            }
-        }
 
         const instance = await Asyncify.instantiate(wasmModule, {
             ...wasi.getImports(wasmModule)
@@ -62,9 +88,8 @@ export class WasiCommands {
         return ({ stdout, stderr });
     }
 
-    private async compileCommand(commandFile: string, wasi: WASI): Promise<WebAssembly.Module> {
+    private async compileCommand(commandFileUri: vscode.Uri): Promise<WebAssembly.Module> {
         let wasmBytes: Uint8Array;
-        const commandFileUri = vscode.Uri.joinPath(this.context.extensionUri, commandFile);
         if (commandFileUri.scheme === 'file') {
             wasmBytes = await vscode.workspace.fs.readFile(commandFileUri);
         }

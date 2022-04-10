@@ -35,7 +35,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private currentLine = this.constructPrompt();
 
     constructor(private readonly context: vscode.ExtensionContext) {
-        this.wasiCmds = new WasiCommands(context);
+        this.wasiCmds = new WasiCommands(context, this.fs);
     }
 
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
@@ -134,13 +134,13 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             case "clear":
                 return { stdout: ACTIONS.clear, stderr: undefined };
 
-            case "echo": {
-                const { stdout, stderr } = await this.wasiCmds.echo(args);
+            case "install": {
+                const { stdout, stderr } = await this.wasiCmds.install(args);
                 return { stdout: stdout, stderr: stderr };
             }
 
-            case "cat": {
-                const { stdout, stderr } = await this.wasiCmds.cat(args, this.fs);
+            case "uninstall": {
+                const { stdout, stderr } = await this.wasiCmds.uninstall(args);
                 return { stdout: stdout, stderr: stderr };
             }
 
@@ -148,7 +148,8 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.closeEmitter.fire();
         }
 
-        return { stdout: undefined, stderr: `Unknown command: ${command}` };
+        const { stdout, stderr } = await this.wasiCmds.run(command, args);
+        return { stdout: stdout, stderr: stderr };
     }
 
     private constructPrompt(): string {
