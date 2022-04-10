@@ -1,4 +1,5 @@
 import { WASI } from '../wasi/wasi';
+import bindings from '@wasmbindings';
 import { WasmFs } from '@wasmer/wasmfs';
 import * as vscode from 'vscode';
 import { FileSystem } from './fs';
@@ -27,7 +28,7 @@ export class WasiCommands {
                 "/": "/",
             },
             bindings: {
-                ...WASI.defaultBindings,
+                ...bindings,
                 fs: wasmFs.fs,
             },
             vscodeFileSystem: fs

@@ -85,7 +85,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 }
 
                 // remove last character
-                this.currentLine = this.currentLine.substr(0, this.currentLine.length - 1);
+                this.currentLine = this.currentLine.substring(0, this.currentLine.length - 1);
                 this.writeEmitter.fire(ACTIONS.cursorBack);
                 this.writeEmitter.fire(ACTIONS.deleteChar);
                 return;

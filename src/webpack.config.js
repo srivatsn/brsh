@@ -19,6 +19,9 @@ const nodeConfig = /** @type WebpackConfig */ {
             // see https://webpack.js.org/configuration/resolve/#resolvefallback
             // for the list of Node.js core module polyfills.
             'assert': require.resolve('assert')
+        },
+        alias: {
+            "@wasmbindings": path.join(__dirname, "../node_modules/@wasmer/wasi/lib/bindings/node")
         }
     },
     module: {
@@ -64,6 +67,9 @@ const webConfig = /** @type WebpackConfig */ {
             // see https://webpack.js.org/configuration/resolve/#resolvefallback
             // for the list of Node.js core module polyfills.
             'assert': require.resolve('assert')
+        },
+        alias: {
+            "@wasmbindings": path.join(__dirname, "../node_modules/@wasmer/wasi/lib/bindings/browser")
         }
     },
     module: {
