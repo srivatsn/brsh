@@ -4,6 +4,7 @@ import { WasmFs } from '@wasmer/wasmfs';
 import * as vscode from 'vscode';
 import { FileSystem } from './fs';
 import * as Asyncify from 'asyncify-wasm';
+import * as axios from 'axios';
 
 
 export class WasiCommands {
@@ -34,9 +35,24 @@ export class WasiCommands {
             vscodeFileSystem: fs
         });
 
-        const wasmResponse = await fetch(vscode.Uri.joinPath(this.context.extensionUri, commandFile).toString());
-        const responseArrayBuffer = await wasmResponse.arrayBuffer();
-        const wasmBytes = new Uint8Array(responseArrayBuffer);
+        let wasmBytes: Uint8Array;
+        const commandFileUri = vscode.Uri.joinPath(this.context.extensionUri, commandFile);
+        if (commandFileUri.scheme === 'file') {
+            wasmBytes = await vscode.workspace.fs.readFile(commandFileUri);
+        }
+        else {
+            try {
+                const wasmResponse = await axios.default(
+                    {
+                        url: commandFileUri.toString(),
+                        responseType: 'arraybuffer',
+                    });
+
+                wasmBytes = new Uint8Array(wasmResponse.data);
+            } catch {
+                return ({ stdout: '', stderr: 'Unable to find command' });
+            }
+        }
         const wasmModule = await WebAssembly.compile(wasmBytes);
         const instance = await Asyncify.instantiate(wasmModule, {
             ...wasi.getImports(wasmModule)

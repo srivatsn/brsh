@@ -52,7 +52,8 @@
 		"asyncify-wasm": "^1.2.1",
 		"buffer": "^6.0.3",
 		"process": "^0.11.10",
-		"shell-quote": "^1.7.2"
+		"shell-quote": "^1.7.2",
+		"axios": "^0.26.1"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.3",
