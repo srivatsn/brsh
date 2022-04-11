@@ -11,8 +11,8 @@ export class WasiCommands {
     private readonly compiledCommands = new Map<string, WebAssembly.Module>();
 
     constructor(private readonly context: vscode.ExtensionContext, private readonly vscodeFileSystem: FileSystem) {
-        this.install(['echo', vscode.Uri.joinPath(this.context.extensionUri, 'echo.wasm').toString()]);
-        this.install(['cat', vscode.Uri.joinPath(this.context.extensionUri, 'cat.wasm').toString()]);
+        this.install(['echo', 'https://wasicommands.blob.core.windows.net/wasicommands/echo.wasm']);
+        this.install(['cat', 'https://wasicommands.blob.core.windows.net/wasicommands/cat.wasm']);
     }
 
     public async install(args: string[]): Promise<{ stdout: string, stderr: string }> {
