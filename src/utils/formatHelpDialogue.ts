@@ -18,7 +18,6 @@ export function formatHelpDialogue(args: string[]):string {
             helpDialogue = prettyPrintCommand(SUPPORTED_COMMANDS[commandName]);
         } else if (compiledCommands.includes(commandName)) {
             helpDialogue = `This is a wasi command you installed. We don't have any more information here. \n`
-        }
         } else {
             helpDialogue = `Sorry, unknown command.\n${HELP_SUBHEADER}\n${HELP_PROMPT}\n`         
         }
