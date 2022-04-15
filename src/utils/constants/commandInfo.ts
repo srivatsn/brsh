@@ -2,65 +2,65 @@
 export interface ICommandInformation {
     name: string,
     description: string,
-    contract: string
+    usage: string
 }
 
 export function prettyPrintCommand (command: ICommandInformation) {
-    return `${command.name}\n${command.description}\ncontract: ${command.contract} \n`;
+    return `${command.name}\n${command.description}\nusage: ${command.usage} \n`;
 }
 
 export const Ls_CommandInfo: ICommandInformation = {
     name: "ls",
     description: "List directory information",
-    contract: "ls"
+    usage: "ls"
 };
 
 export const Cd_CommandInfo: ICommandInformation = {
     name: "cd",
     description: "Enter directory",
-    contract: "cd <path>"
+    usage: "cd <path>"
 };
 
 export const Pwd_CommandInfo: ICommandInformation = {
     name: "pwd",
     description: "Print current path",
-    contract: "pwd"
+    usage: "pwd"
 };
 
 export const Code_CommandInfo: ICommandInformation = {
     name: "code",
     description: "Open file/folder/current directory",
-    contract: "code <path?>"
+    usage: "code <path?>"
 };
 
 export const Clear_CommandInfo: ICommandInformation = {
     name: "clear",
     description: "Clear terminal",
-    contract: "clear"
+    usage: "clear"
 };
 
 export const Help_CommandInfo: ICommandInformation = {
     name: "help",
     description: "Get info about brsh",
-    contract: "help <command_name?>"
+    usage: "help <command_name?>"
 };
 
 export const Install_CommandInfo: ICommandInformation = {
     name: "install",
     description: "Install a new wasi cmd to brsh",
-    contract: "install <wasi_url>"
+    usage: "install <command_name> <wasi_url>"
 };
 
 export const UnInstall_CommandInfo: ICommandInformation = {
     name: "uninstall",
     description: "Uninstall a wasi cmd from brsh",
-    contract: "uninstall <wasi_command>"
+    usage: "uninstall <wasi_command>"
 };
 
 export const Exit_CommandInfo: ICommandInformation = {
     name: "exit",
     description: "Close brsh :(",
-    contract: "exit"
+    usage: "exit"
 };
 
 export const SUPPORTED_COMMANDS: {[name: string] : ICommandInformation} = {

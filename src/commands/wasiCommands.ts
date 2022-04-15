@@ -8,7 +8,7 @@ import * as axios from 'axios';
 
 
 export class WasiCommands {
-    private readonly compiledCommands = new Map<string, WebAssembly.Module>();
+    public static readonly compiledCommands = new Map<string, WebAssembly.Module>();
 
     constructor(private readonly context: vscode.ExtensionContext, private readonly vscodeFileSystem: FileSystem) {
         this.install(['echo', 'https://wasicommands.blob.core.windows.net/wasicommands/echo.wasm']);
@@ -31,7 +31,7 @@ export class WasiCommands {
 
         try {
             const module = await this.compileCommand(commandFileUri);
-            this.compiledCommands.set(commandName, module);
+            WasiCommands.compiledCommands.set(commandName, module);
         } catch (e: any) {
             return ({ stdout: "", stderr: `Failed to install ${commandName}: ${e.toString()}` });
         }
@@ -45,16 +45,16 @@ export class WasiCommands {
         }
 
         const commandName = args[0];
-        if (!this.compiledCommands.has(commandName)) {
+        if (!WasiCommands.compiledCommands.has(commandName)) {
             return { stdout: "", stderr: `Usage: Unkown command ${commandName}` };
         }
 
-        this.compiledCommands.delete(commandName);
+        WasiCommands.compiledCommands.delete(commandName);
         return ({ stdout: `Successfully uninstalled ${commandName}`, stderr: "" });
     }
 
     public async run(commandName: string, args: string[]): Promise<{ stdout: string, stderr: string }> {
-        let wasmModule = this.compiledCommands.get(commandName);
+        let wasmModule = WasiCommands.compiledCommands.get(commandName);
 
         if (wasmModule === undefined) {
             return ({ stdout: "", stderr: `Unknown command: ${commandName}` });
