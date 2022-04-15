@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { FileSystem } from './commands/fs';
 import * as quote from 'shell-quote';
 import { WasiCommands } from './commands/wasiCommands';
+import { formatHelpDialogue } from './utils/formatHelpDialogue';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -133,6 +134,9 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
             case "clear":
                 return { stdout: ACTIONS.clear, stderr: undefined };
+            
+            case "help":
+                return { stdout: formatHelpDialogue(args), stderr: undefined }
 
             case "install": {
                 const { stdout, stderr } = await this.wasiCmds.install(args);
