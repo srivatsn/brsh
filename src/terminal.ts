@@ -4,6 +4,7 @@ import * as quote from 'shell-quote';
 import { WasiCommands } from './commands/wasiCommands';
 import { formatHelpDialogue } from './utils/formatHelpDialogue';
 import { HELP_SUBHEADER, WELCOME_DIALOGUE } from './utils/constants/constants';
+import { autocomplete } from './utils/constants/autocomplete';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -66,6 +67,8 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
     async handleInput(data: string): Promise<void> {
         const promptLength = this.constructPrompt().length;
+        this.removeQuestionMark();
+        
         switch (data) {
             case KEYS.enter:
                 this.writeEmitter.fire(`\r\n`);
@@ -101,21 +104,15 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 }
 
                 // remove last character
-                this.currentLine = this.currentLine.substring(0, this.currentLine.length - 1);
-                this.writeEmitter.fire(ACTIONS.cursorBack);
-                this.writeEmitter.fire(ACTIONS.deleteChar);
+                this.removeNCharacters(1);
                 return;
             case KEYS.up:
                 this.clearCurrentCommand();
-                let hUp = this.getHistory(--this.historyPointer);
-                this.currentLine += hUp;
-                this.writeEmitter.fire(hUp);
+                this.addSnippetToCurrentLine(this.getHistory(--this.historyPointer));
                 return;
             case KEYS.down:
                 this.clearCurrentCommand();
-                let hDown = this.getHistory(++this.historyPointer);
-                this.currentLine += hDown;
-                this.writeEmitter.fire(hDown);
+                this.addSnippetToCurrentLine(this.getHistory(++this.historyPointer));
                 return;
             case KEYS.pageUp:
                 return;
@@ -123,6 +120,9 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 return
             case KEYS.tab:
                 // TODO: Autocomplete.
+                let commandSlice = this.currentLine.slice(this.constructPrompt().length);
+                let autoComplete = autocomplete(commandSlice, this.commandHistory);
+                this.addSnippetToCurrentLine(autoComplete);
                 return;
 
             default:
@@ -130,17 +130,35 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.writeEmitter.fire(data);
         }
     }
+
+    removeQuestionMark() {
+        // use this to indicate autocomplete attempt
+        // TODO: make this some emoji type character that users would never use
+        if (this.currentLine.endsWith("?")) {
+            this.removeNCharacters(1);
+        }
+    }
     
+    addSnippetToCurrentLine(snippet: string) {
+        this.currentLine += snippet;
+        this.writeEmitter.fire(snippet);
+    }
+
     clearCurrentCommand() {
         // remove last character
         const command = this.currentLine.slice(this.constructPrompt().length);
 
-        for (let i = 0; i < command.length; i++) {
+        this.removeNCharacters(command.length);
+    }
+
+    removeNCharacters(n: number) {
+        for (let i = 0; i < n; i++) {
             this.currentLine = this.currentLine.substring(0, this.currentLine.length - 1);
             this.writeEmitter.fire(ACTIONS.cursorBack);
             this.writeEmitter.fire(ACTIONS.deleteChar);
         }
     }
+
     getHistory(historyIndex: number): string {
         // if no more history
         if (historyIndex < 0 
