@@ -3,6 +3,7 @@ import { FileSystem } from './commands/fs';
 import * as quote from 'shell-quote';
 import { WasiCommands } from './commands/wasiCommands';
 import { formatHelpDialogue } from './utils/formatHelpDialogue';
+import { HELP_SUBHEADER, WELCOME_DIALOGUE } from './utils/constants/constants';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -33,6 +34,9 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly fs = new FileSystem();
     private readonly wasiCmds;
 
+    private commandHistory: string[] = [];
+    private historyPointer = 0;
+
     private currentLine = this.constructPrompt();
 
     constructor(private readonly context: vscode.ExtensionContext) {
@@ -46,6 +50,10 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     onDidChangeName?: vscode.Event<string> | undefined;
 
     open(initialDimensions: vscode.TerminalDimensions | undefined): void {
+        //prompt dialogue
+        const welcomePrompt = `${WELCOME_DIALOGUE}\r\n${HELP_SUBHEADER}\r\n`;
+        this.writeEmitter.fire(welcomePrompt);
+
         this.writeEmitter.fire(this.currentLine);
     }
     close(): void {
@@ -74,12 +82,19 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                     if (stderr && stderr.length) {
                         this.writeEmitter.fire(this.formatText(stderr));
                     }
+
+                    if (stdout || stderr) {
+                        // if there was some valid output, then add this to the command history
+                        this.commandHistory.push(command);
+                    }
                 } catch (error: any) {
                     this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
                 }
 
                 this.currentLine = this.constructPrompt();
                 this.writeEmitter.fire(`\r${this.currentLine}`);
+                
+                this.historyPointer = this.commandHistory.length;
             case KEYS.backspace:
                 if (this.currentLine.length <= promptLength) {
                     return;
@@ -91,11 +106,21 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.writeEmitter.fire(ACTIONS.deleteChar);
                 return;
             case KEYS.up:
-            case KEYS.down:
-            case KEYS.pageUp:
-            case KEYS.pageDown:
-                // TODO: Provide history.
+                this.clearCurrentCommand();
+                let hUp = this.getHistory(--this.historyPointer);
+                this.currentLine += hUp;
+                this.writeEmitter.fire(hUp);
                 return;
+            case KEYS.down:
+                this.clearCurrentCommand();
+                let hDown = this.getHistory(++this.historyPointer);
+                this.currentLine += hDown;
+                this.writeEmitter.fire(hDown);
+                return;
+            case KEYS.pageUp:
+                return;
+            case KEYS.pageDown:
+                return
             case KEYS.tab:
                 // TODO: Autocomplete.
                 return;
@@ -104,6 +129,27 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 this.currentLine += data;
                 this.writeEmitter.fire(data);
         }
+    }
+    
+    clearCurrentCommand() {
+        // remove last character
+        const command = this.currentLine.slice(this.constructPrompt().length);
+
+        for (let i = 0; i < command.length; i++) {
+            this.currentLine = this.currentLine.substring(0, this.currentLine.length - 1);
+            this.writeEmitter.fire(ACTIONS.cursorBack);
+            this.writeEmitter.fire(ACTIONS.deleteChar);
+        }
+    }
+    getHistory(historyIndex: number): string {
+        // if no more history
+        if (historyIndex < 0 
+            || this.commandHistory.length == 0
+            || historyIndex >= this.commandHistory.length) {
+            this.historyPointer = this.commandHistory.length;
+            return "----";
+        }
+        return this.commandHistory[historyIndex];        
     }
 
     async executeCommand(input: string): Promise<{ stdout: string | undefined; stderr: string | undefined; }> {
