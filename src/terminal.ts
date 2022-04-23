@@ -121,7 +121,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             case KEYS.tab:
                 // TODO: Autocomplete.
                 let commandSlice = this.currentLine.slice(this.constructPrompt().length);
-                let autoComplete = autocomplete(commandSlice, this.commandHistory);
+                let autoComplete = await autocomplete(commandSlice, this.commandHistory, this.fs);
                 this.addSnippetToCurrentLine(autoComplete);
                 return;
 
@@ -160,12 +160,11 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     }
 
     getHistory(historyIndex: number): string {
-        // if no more history
-        if (historyIndex < 0 
-            || this.commandHistory.length == 0
-            || historyIndex >= this.commandHistory.length) {
-            this.historyPointer = this.commandHistory.length;
-            return "----";
+        // if no more history, lock on last entry
+        if (historyIndex < 0) {
+            this.historyPointer = 0;
+        } else if (historyIndex >= this.commandHistory.length) {
+            this.historyPointer = this.commandHistory.length-1;
         }
         return this.commandHistory[historyIndex];        
     }
