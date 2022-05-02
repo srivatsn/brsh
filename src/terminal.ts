@@ -5,6 +5,7 @@ import { WasiCommands } from './commands/wasiCommands';
 import { formatHelpDialogue } from './utils/formatHelpDialogue';
 import { HELP_SUBHEADER, WELCOME_DIALOGUE } from './utils/constants/constants';
 import { autocomplete } from './utils/constants/autocomplete';
+import { PythonRunner } from './commands/pythonRunner';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -34,6 +35,9 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
     private readonly wasiCmds;
+    private readonly pythonRunner;
+    private inputBuffer: string = "";
+    private isBufferingInput = false;
 
     private commandHistory: string[] = [];
     private historyPointer = 0;
@@ -42,6 +46,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
 
     constructor(private readonly context: vscode.ExtensionContext) {
         this.wasiCmds = new WasiCommands(context, this.fs);
+        this.pythonRunner = new PythonRunner(context, this.fs);
     }
 
     onDidWrite: vscode.Event<string> = this.writeEmitter.event;
@@ -68,36 +73,19 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     async handleInput(data: string): Promise<void> {
         const promptLength = this.constructPrompt().length;
         this.removeQuestionMark();
-        
+
+        if (this.isBufferingInput) {
+            this.inputBuffer += data;
+            return;
+        }
+
         switch (data) {
             case KEYS.enter:
                 this.writeEmitter.fire(`\r\n`);
 
-                const command = this.currentLine.slice(this.constructPrompt().length);
-                // execute command
-                try {
-                    const { stdout, stderr } = await this.executeCommand(command);
+                await this.processEnter();
+                return;
 
-                    if (stdout) {
-                        this.writeEmitter.fire(this.formatText(stdout));
-                    }
-
-                    if (stderr && stderr.length) {
-                        this.writeEmitter.fire(this.formatText(stderr));
-                    }
-
-                    if (stdout || stderr) {
-                        // if there was some valid output, then add this to the command history
-                        this.commandHistory.push(command);
-                    }
-                } catch (error: any) {
-                    this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
-                }
-
-                this.currentLine = this.constructPrompt();
-                this.writeEmitter.fire(`\r${this.currentLine}`);
-                
-                this.historyPointer = this.commandHistory.length;
             case KEYS.backspace:
                 if (this.currentLine.length <= promptLength) {
                     return;
@@ -117,7 +105,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             case KEYS.pageUp:
                 return;
             case KEYS.pageDown:
-                return
+                return;
             case KEYS.tab:
                 // TODO: Autocomplete.
                 let commandSlice = this.currentLine.slice(this.constructPrompt().length);
@@ -128,6 +116,60 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             default:
                 this.currentLine += data;
                 this.writeEmitter.fire(data);
+        }
+    }
+
+    private async processEnter() {
+        const command = this.currentLine.slice(this.constructPrompt().length);
+
+        // Start buffering input since we are about execute a command and input would be blocked.
+        this.isBufferingInput = true;
+
+        // execute command
+        try {
+            const { stdout, stderr } = await this.executeCommand(command);
+
+            if (stdout) {
+                this.writeEmitter.fire(this.formatText(stdout));
+            }
+
+            if (stderr && stderr.length) {
+                this.writeEmitter.fire(this.formatText(stderr));
+            }
+
+            if (stdout || stderr) {
+                // if there was some valid output, then add this to the command history
+                this.commandHistory.push(command);
+            }
+        } catch (error: any) {
+            this.writeEmitter.fire(`\r${this.formatText(error.message)}`);
+        }
+
+        this.currentLine = this.constructPrompt();
+        this.writeEmitter.fire(`\r${this.currentLine}`);
+        this.historyPointer = this.commandHistory.length;
+
+        await this.processNextLineFromInputBuffer();
+
+        // Stop buffering input. We are done executing the command.
+        this.isBufferingInput = false;
+    }
+
+
+    private async processNextLineFromInputBuffer() {
+        // read the next line from input buffer
+        let nextLine = this.inputBuffer.indexOf('\r') === -1 ? this.inputBuffer : this.inputBuffer.slice(0, this.inputBuffer.indexOf('\r') + 1);
+        // remove the line from the input buffer
+        this.inputBuffer = this.inputBuffer.slice(nextLine.length);
+
+        if (nextLine.endsWith('\r')) {
+            nextLine = nextLine.substring(0, nextLine.length - 1);
+            this.currentLine += nextLine;
+            this.writeEmitter.fire(nextLine + '\r\n');
+            await this.processEnter();
+        } else {
+            this.currentLine += nextLine;
+            this.writeEmitter.fire(nextLine);
         }
     }
 
@@ -199,7 +241,12 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 return { stdout: ACTIONS.clear, stderr: undefined };
             
             case "help":
-                return { stdout: formatHelpDialogue(args), stderr: undefined }
+                return { stdout: formatHelpDialogue(args), stderr: undefined };
+
+            case "python": {
+                const { stdout, stderr } = await this.pythonRunner.run(args);
+                return { stdout: stdout, stderr: stderr };
+            }
 
             case "install": {
                 const { stdout, stderr } = await this.wasiCmds.install(args);
