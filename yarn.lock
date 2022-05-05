@@ -2247,6 +2247,11 @@ wasm-feature-detect@^1.2.2:
   resolved "https://registry.yarnpkg.com/wasm-feature-detect/-/wasm-feature-detect-1.2.11.tgz#e21992fd1f1d41a47490e392a5893cb39d81e29e"
   integrity sha512-HUqwaodrQGaZgz1lZaNioIkog9tkeEJjrM3eq4aUL04whXOVDRc/o2EGb/8kV0QX411iAYWEqq7fMBmJ6dKS6w==
 
+wasm-git@0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/wasm-git/-/wasm-git-0.0.8.tgz#158ab12c30a475ef8ced6d7bce93c149d5ee1492"
+  integrity sha512-JxT07IUQMJ4l9Sk/BHqyH3xZ0XtoAcCB4zQrDW3aHq5dwDT8OpXxhGwCcLcrl09T/j7MI7XbwqwkK7R86+T57w==
+
 watchpack@^2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/watchpack/-/watchpack-2.2.0.tgz#47d78f5415fe550ecd740f99fe2882323a58b1ce"

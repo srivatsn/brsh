@@ -5,6 +5,7 @@ import { WasiCommands } from './commands/wasiCommands';
 import { formatHelpDialogue } from './utils/formatHelpDialogue';
 import { HELP_SUBHEADER, WELCOME_DIALOGUE } from './utils/constants/constants';
 import { autocomplete } from './utils/constants/autocomplete';
+import { Git } from './commands/git';
 
 // Settings
 const PROMPT = "\x1b[32mcodespace\x1b[0m → \x1b[34m$pwd\x1b[0m $ ";
@@ -33,6 +34,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
     private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
+    private readonly git = new Git()
     private readonly wasiCmds;
 
     private commandHistory: string[] = [];
@@ -209,6 +211,11 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
             case "uninstall": {
                 const { stdout, stderr } = await this.wasiCmds.uninstall(args);
                 return { stdout: stdout, stderr: stderr };
+            }
+
+            case "git": {
+                await this.git.command("clone");
+                return { stdout: "", stderr: "" };
             }
 
             case "exit":
