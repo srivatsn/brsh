@@ -38,7 +38,7 @@ export class WasiCommands {
 
         return ({ stdout: `Successfully installed ${commandName}`, stderr: "" });
     }
-
+    
     public async uninstall(args: string[]): Promise<{ stdout: string, stderr: string }> {
         if (args.length !== 1) {
             return { stdout: "", stderr: "Usage: uninstall <command to be uninstalled>" };
