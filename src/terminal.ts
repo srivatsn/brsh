@@ -213,11 +213,6 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
                 return { stdout: stdout, stderr: stderr };
             }
 
-            case "git": {
-                await this.git.command("clone");
-                return { stdout: "", stderr: "" };
-            }
-
             case "exit":
                 this.closeEmitter.fire();
         }
