@@ -30,13 +30,46 @@ const ACTIONS = {
     clear: "\x1b[2J\x1b[3J\x1b[;H",
 };
 
+export class InputBuffer {
+    private inputBuffer: string = "";
+    private newInputEmitter: vscode.EventEmitter<boolean> = new vscode.EventEmitter<boolean>();
+
+    public readLine(): Promise<string> {
+        if (this.inputBuffer.indexOf('\r') !== -1) {
+            return Promise.resolve(this.popNextLine());
+        }
+
+        return new Promise((resolve) => {
+            this.newInputEmitter.event(() => {
+                if (this.inputBuffer.indexOf('\r') !== -1) {
+                    resolve(this.popNextLine());
+                }
+            });
+        });
+    }
+
+    public append(str: string) {
+        this.inputBuffer += str;
+        this.newInputEmitter.fire(true);
+    }
+
+    public popNextLine(): string {
+        // read the next line from input buffer
+        const nextLine = this.inputBuffer.indexOf('\r') === -1 ? this.inputBuffer : this.inputBuffer.slice(0, this.inputBuffer.indexOf('\r') + 1);
+        // remove the line from the input buffer
+        this.inputBuffer = this.inputBuffer.slice(nextLine.length);
+
+        return nextLine;
+    }
+}
+
 export class BrowserTerminal implements vscode.Pseudoterminal {
     private readonly writeEmitter = new vscode.EventEmitter<string>();
     private readonly closeEmitter = new vscode.EventEmitter<void>();
     private readonly fs = new FileSystem();
     private readonly wasiCmds;
     private readonly pythonRunner;
-    private inputBuffer: string = "";
+    private inputBuffer = new InputBuffer();
     private isBufferingInput = false;
 
     private commandHistory: string[] = [];
@@ -75,7 +108,7 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
         this.removeQuestionMark();
 
         if (this.isBufferingInput) {
-            this.inputBuffer += data;
+            this.inputBuffer.append(data);
             return;
         }
 
@@ -155,21 +188,17 @@ export class BrowserTerminal implements vscode.Pseudoterminal {
         this.isBufferingInput = false;
     }
 
-
     private async processNextLineFromInputBuffer() {
         // read the next line from input buffer
-        let nextLine = this.inputBuffer.indexOf('\r') === -1 ? this.inputBuffer : this.inputBuffer.slice(0, this.inputBuffer.indexOf('\r') + 1);
-        // remove the line from the input buffer
-        this.inputBuffer = this.inputBuffer.slice(nextLine.length);
+        let nextLine = this.inputBuffer.popNextLine();
 
         if (nextLine.endsWith('\r')) {
             nextLine = nextLine.substring(0, nextLine.length - 1);
-            this.currentLine += nextLine;
-            this.writeEmitter.fire(nextLine + '\r\n');
+            this.addSnippetToCurrentLine(nextLine);
+            this.writeEmitter.fire('\r\n');
             await this.processEnter();
         } else {
-            this.currentLine += nextLine;
-            this.writeEmitter.fire(nextLine);
+            this.addSnippetToCurrentLine(nextLine);
         }
     }
 
